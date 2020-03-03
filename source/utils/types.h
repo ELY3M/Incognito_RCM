@@ -20,6 +20,7 @@
 #define NULL ((void *)0)
 
 #define ALIGN(x, a) (((x) + (a) - 1) & ~((a) - 1))
+#define ALIGN_DOWN(x, a) (((x) - ((a) - 1)) & ~((a) - 1))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -36,7 +37,8 @@
 #define KB_FIRMWARE_VERSION_700 7
 #define KB_FIRMWARE_VERSION_810 8
 #define KB_FIRMWARE_VERSION_900 9
-#define KB_FIRMWARE_VERSION_MAX KB_FIRMWARE_VERSION_900
+#define KB_FIRMWARE_VERSION_910 10
+#define KB_FIRMWARE_VERSION_MAX KB_FIRMWARE_VERSION_910
 
 #define HOS_PKG11_MAGIC 0x31314B50
 

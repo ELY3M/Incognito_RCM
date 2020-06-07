@@ -34,6 +34,7 @@
 #include "storage/emummc.h"
 #include "storage/nx_emmc.h"
 #include "storage/sdmmc.h"
+#include "storage/sdmmc_driver.h"
 #include "utils/btn.h"
 #include "utils/dirlist.h"
 #include "utils/sprintf.h"
@@ -56,7 +57,7 @@ bool sd_mount()
 	if (sd_mounted)
 		return true;
 
-	if (!sdmmc_storage_init_sd(&sd_storage, &sd_sdmmc, SDMMC_1, SDMMC_BUS_WIDTH_4, 11))
+	if (!sdmmc_storage_init_sd(&sd_storage, &sd_sdmmc, SDMMC_BUS_WIDTH_4, SDHCI_TIMING_UHS_SDR104))
 	{
 		EPRINTF("Failed to init SD card.\nMake sure that it is inserted.\nOr that SD reader is properly seated!");
 	}
@@ -137,9 +138,11 @@ int sd_save_to_file(void *buf, u32 size, const char *filename)
 #define PATCHED_RELOC_ENTRY 0x40010000
 #define EXT_PAYLOAD_ADDR    0xC03C0000
 #define RCM_PAYLOAD_ADDR    (EXT_PAYLOAD_ADDR + ALIGN(PATCHED_RELOC_SZ, 0x10))
-#define COREBOOT_ADDR       (0xD0000000 - 0x100000)
+#define COREBOOT_END_ADDR   0xD0000000
 #define CBFS_DRAM_EN_ADDR   0x4003e000
 #define  CBFS_DRAM_MAGIC    0x4452414D // "DRAM"
+
+static void *coreboot_addr;
 
 void reloc_patcher(u32 payload_dst, u32 payload_src, u32 payload_size)
 {
@@ -154,7 +157,7 @@ void reloc_patcher(u32 payload_dst, u32 payload_src, u32 payload_size)
 
 	if (payload_size == 0x7000)
 	{
-		memcpy((u8 *)(payload_src + ALIGN(PATCHED_RELOC_SZ, 0x10)), (u8 *)COREBOOT_ADDR, 0x7000); //Bootblock
+		memcpy((u8 *)(payload_src + ALIGN(PATCHED_RELOC_SZ, 0x10)), coreboot_addr, 0x7000); //Bootblock
 		*(vu32 *)CBFS_DRAM_EN_ADDR = CBFS_DRAM_MAGIC;
 	}
 }
@@ -184,7 +187,10 @@ int launch_payload(char *path)
 		if (size < 0x30000)
 			buf = (void *)RCM_PAYLOAD_ADDR;
 		else
-			buf = (void *)COREBOOT_ADDR;
+		{
+			coreboot_addr = (void *)(COREBOOT_END_ADDR - size);
+			buf = coreboot_addr;
+		}
 
 		if (f_read(&fp, buf, size, NULL))
 		{
@@ -336,6 +342,10 @@ out:
 	btn_wait();
 }
 
+/*  sysnand should not be incognitoed at all!!!!   
+I see too many switches get "banned" due to lost backups :( 
+ELY M. 
+
 void incognito_sysnand()
 {
 
@@ -357,6 +367,8 @@ out:
     gfx_printf("\n%k---------------\n%kPress any key to return to the main menu.", COLOR_YELLOW, COLOR_ORANGE);
     btn_wait();
 }
+*/ 
+
 
 void incognito_emunand()
 {
@@ -453,7 +465,7 @@ ment_t ment_top[] = {
     MDEF_HANDLER("Backup (SysNAND)", backup_sysnand, COLOR_ORANGE),
     MDEF_HANDLER("Backup (emuMMC)", backup_emunand, COLOR_ORANGE),
     MDEF_CAPTION("", COLOR_YELLOW),
-    MDEF_HANDLER("Incognito (SysNAND)", incognito_sysnand, COLOR_ORANGE),
+    /**MDEF_HANDLER("Incognito (SysNAND)", incognito_sysnand, COLOR_ORANGE),**/
     MDEF_HANDLER("Incognito (emuMMC)", incognito_emunand, COLOR_ORANGE),
 
     MDEF_CAPTION("", COLOR_YELLOW),
